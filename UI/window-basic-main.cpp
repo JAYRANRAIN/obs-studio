@@ -2630,9 +2630,9 @@ void OBSBasic::MixerRenameSource()
 	VolControl *vol = action->property("volControl").value<VolControl*>();
 	OBSSource source = vol->GetSource();
 	QString prevName;
-	if (obs_source_get_output_flags(source) & OBS_SOURCE_TRACK)
+	/*if (obs_source_get_output_flags(source) & OBS_SOURCE_TRACK)
 		prevName = vol->objectName();
-	else
+	else*/
 		prevName = QT_UTF8(obs_source_get_name(source));
 
 
@@ -3041,6 +3041,10 @@ void OBSBasic::InitAudioMasterMixer() {
 			tracks[i] = obs_source_create_private("obs_track_out",
 					name, NULL);
 		obs_source_set_track_active(tracks[i]);
+		obs_data_t *private_settings =
+				obs_source_get_private_settings(tracks[i]);
+		obs_data_set_int(private_settings, "track_index", i);
+		obs_data_release(private_settings);
 	}
 	obs_audio_mix_unlock();
 

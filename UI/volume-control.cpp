@@ -55,6 +55,15 @@ void VolControl::MonitoringEnabled(bool checked) {
 void VolControl::OBSMonitoringEnabled(void *data, calldata_t *calldata) {
 	VolControl *volControl = static_cast<VolControl*>(data);
 	bool monitoring = calldata_bool(calldata, "monitor");
+	obs_source *source = (obs_source *)calldata_ptr(calldata, "source");
+	if (obs_source_get_output_flags(source) & OBS_SOURCE_TRACK) {
+	OBSBasic *main = reinterpret_cast<OBSBasic*>(App()->GetMainWindow());
+	obs_data_t *private_settings =
+		obs_source_get_private_settings(source);
+	int trackIndex = obs_data_get_int(private_settings, "track_index");
+	obs_data_release(private_settings);
+	volControl = main->GetMasterVol()[trackIndex];
+	}
 
 	QMetaObject::invokeMethod(volControl, "MonitoringEnabled",
 			Q_ARG(bool, monitoring));
