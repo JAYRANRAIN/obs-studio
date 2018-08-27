@@ -533,6 +533,7 @@ enum audio_action_type {
 	AUDIO_ACTION_MUTE,
 	AUDIO_ACTION_PTT,
 	AUDIO_ACTION_PTM,
+	AUDIO_ACTION_MON,
 };
 
 struct audio_action {
@@ -716,6 +717,7 @@ struct obs_source {
 	enum obs_monitoring_type        monitoring_type;
 
 	obs_data_t                      *private_settings;
+	bool                            monitoring;
 };
 
 extern struct obs_source_info *get_source_info(const char *id);

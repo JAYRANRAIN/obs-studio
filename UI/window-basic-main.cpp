@@ -1691,7 +1691,7 @@ void OBSBasic::OBSInit()
 	/* ----------------------- */
 	/* Add master mixer        */
 
-	InitAudioMasterMixer();
+//	InitAudioMasterMixer();
 
 #if !defined(_WIN32) && !defined(__APPLE__)
 	delete ui->actionShowCrashLogs;

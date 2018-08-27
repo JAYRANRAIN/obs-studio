@@ -45,6 +45,21 @@ void VolControl::OBSVolumeMuted(void *data, calldata_t *calldata)
 			Q_ARG(bool, muted));
 }
 
+
+void VolControl::MonitoringEnabled(bool checked) {
+	if (mon->isChecked() != checked)
+		mon->setChecked(checked);
+	SetMon(checked);
+}
+
+void VolControl::OBSMonitoringEnabled(void *data, calldata_t *calldata) {
+	VolControl *volControl = static_cast<VolControl*>(data);
+	bool monitoring = calldata_bool(calldata, "monitor");
+
+	QMetaObject::invokeMethod(volControl, "MonitoringEnabled",
+			Q_ARG(bool, monitoring));
+}
+
 void VolControl::VolumeChanged()
 {
 	slider->blockSignals(true);
@@ -416,6 +431,10 @@ VolControl::VolControl(OBSSource source_, bool *mutePtr, bool showConfig, bool v
 		mon->setChecked(monON);
 		mon->setAccessibleName(QTStr("VolControl.Mon"));
 		mon->setToolTip(QTStr("VolControl.Mon.Tooltip"));
+
+		signal_handler_connect(obs_source_get_signal_handler(source),
+				"monitor", OBSMonitoringEnabled, this);
+
 		QWidget::connect(mon, SIGNAL(clicked(bool)),
 				this, SLOT(SetMon(bool)));
 	}

@@ -60,6 +60,7 @@ static const char *source_signals[] = {
 	"void show(ptr source)",
 	"void hide(ptr source)",
 	"void mute(ptr source, bool muted)",
+	"void monitor(ptr source, bool monitoring)"
 	"void push_to_mute_changed(ptr source, bool enabled)",
 	"void push_to_mute_delay(ptr source, int delay)",
 	"void push_to_talk_changed(ptr source, bool enabled)",
@@ -258,7 +259,9 @@ static bool obs_source_hotkey_monitor(void *data,
 	else
 		type = OBS_MONITORING_TYPE_MONITOR_ONLY;
 
-	obs_source_set_monitoring_type(source, type);
+//	obs_source_set_monitoring_type(source, type);
+	source->monitoring = true;
+	obs_source_set_monitoring(source, true);
 	obs_data_release(private_settings);
 
 	return true;
@@ -285,8 +288,9 @@ static bool obs_source_hotkey_unmonitor(void *data,
 		return false;
 
 	type = OBS_MONITORING_TYPE_NONE;
-	obs_source_set_monitoring_type(source, type);
-
+//	obs_source_set_monitoring_type(source, type);
+	source->monitoring = false;
+	obs_source_set_monitoring(source, false);
 	return true;
 }
 
@@ -3701,6 +3705,31 @@ void obs_source_set_muted(obs_source_t *source, bool muted)
 	pthread_mutex_unlock(&source->audio_actions_mutex);
 }
 
+void obs_source_set_monitoring(obs_source_t *source, bool monitoring) {
+	struct calldata data;
+	uint8_t stack[128];
+	struct audio_action action = {
+		.timestamp = os_gettime_ns(),
+		.type = AUDIO_ACTION_MON,
+		.set = monitoring
+	};
+
+	if (!obs_source_valid(source, "obs_source_set_monitoring"))
+		return;
+
+	source->monitoring = monitoring;
+
+	calldata_init_fixed(&data, stack, sizeof(stack));
+	calldata_set_ptr(&data, "source", source);
+	calldata_set_bool(&data, "monitor", monitoring);
+
+	signal_handler_signal(source->context.signals, "monitor", &data);
+
+	pthread_mutex_lock(&source->audio_actions_mutex);
+	da_push_back(source->audio_actions, &action);
+	pthread_mutex_unlock(&source->audio_actions_mutex);
+}
+
 static void source_signal_push_to_changed(obs_source_t *source,
 		const char *signal, bool enabled)
 {
@@ -3907,6 +3936,8 @@ static inline void apply_audio_action(obs_source_t *source,
 		source->volume = action->vol; break;
 	case AUDIO_ACTION_MUTE:
 		source->muted = action->set; break;
+	case AUDIO_ACTION_MON:
+		source->monitoring = action->set; break;
 	case AUDIO_ACTION_PTT:
 		source->push_to_talk_pressed = action->set; break;
 	case AUDIO_ACTION_PTM:
