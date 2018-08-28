@@ -3037,14 +3037,17 @@ void OBSBasic::InitAudioMasterMixer() {
 		} else {
 			name = trackNum.c_str();
 		}
-		if (!tracks[i])
+		if (!tracks[i]) {
 			tracks[i] = obs_source_create_private("obs_track_out",
-					name, NULL);
+				name, NULL);
+			obs_data_t *private_settings =
+					obs_source_get_private_settings(tracks[i]);
+			obs_data_set_int(private_settings, "track_index", i);
+			obs_data_set_bool(private_settings, "mixer_hidden",
+					false);
+			obs_data_release(private_settings);
+		}
 		obs_source_set_track_active(tracks[i]);
-		obs_data_t *private_settings =
-				obs_source_get_private_settings(tracks[i]);
-		obs_data_set_int(private_settings, "track_index", i);
-		obs_data_release(private_settings);
 	}
 	obs_audio_mix_unlock();
 
@@ -3090,6 +3093,8 @@ void OBSBasic::InitAudioMasterMixer() {
 	for (int i = 0; i < MAX_AUDIO_MIXES; i++) {
 		if (isAdvancedMode) {
 			obs_data_t *private_settings = obs_source_get_private_settings(vol[i]->GetSource());
+			obs_data_set_default_bool(private_settings, "mixer_hidden",
+					false);
 			hidden[i] = obs_data_get_bool(private_settings, "mixer_hidden");
 			obs_data_release(private_settings);
 		} else if ( i == 0) {

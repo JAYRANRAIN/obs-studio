@@ -212,7 +212,6 @@ static bool obs_source_hotkey_mute(void *data,
 	obs_source_set_muted(source, true);
 	if (source->info.output_flags & OBS_SOURCE_TRACK)
 		*mute = true;
-
 	return true;
 }
 
@@ -238,9 +237,6 @@ static bool obs_source_hotkey_monitor(void *data,
 	UNUSED_PARAMETER(key);
 	bool *monON;
 	struct obs_source *source = data;
-	// for now, enable monitoring only for tracks
-	if (!(source->info.output_flags & OBS_SOURCE_TRACK))
-		return false;
 
 	enum obs_monitoring_type type = obs_source_get_monitoring_type(source);
 	if (type == OBS_MONITORING_TYPE_NONE)
@@ -251,18 +247,8 @@ static bool obs_source_hotkey_monitor(void *data,
 	if (!pressed || monON)
 		return false;
 
-	obs_data_t *private_settings = obs_source_get_private_settings(source);
-	bool isOutput = obs_data_get_bool(private_settings, "isOutput");
-
-	if (isOutput)
-		type = OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT;
-	else
-		type = OBS_MONITORING_TYPE_MONITOR_ONLY;
-
-//	obs_source_set_monitoring_type(source, type);
 	source->monitoring = true;
 	obs_source_set_monitoring(source, true);
-	obs_data_release(private_settings);
 
 	return true;
 }
@@ -274,21 +260,10 @@ static bool obs_source_hotkey_unmonitor(void *data,
 	bool *monOFF;
 	struct obs_source *source = data;
 
-	// for now, enable monitoring only for tracks
-	if (!(source->info.output_flags & OBS_SOURCE_TRACK))
-		return false;
-
 	enum obs_monitoring_type type = obs_source_get_monitoring_type(source);
-	if (type == OBS_MONITORING_TYPE_NONE)
-		monOFF = true;
-	else
-		monOFF = false;
-
+	monOFF = type == OBS_MONITORING_TYPE_NONE ? true : false;
 	if (!pressed || monOFF)
 		return false;
-
-	type = OBS_MONITORING_TYPE_NONE;
-//	obs_source_set_monitoring_type(source, type);
 	source->monitoring = false;
 	obs_source_set_monitoring(source, false);
 	return true;
@@ -352,13 +327,11 @@ static void obs_source_init_audio_hotkeys(struct obs_source *source)
 			obs_source_hotkey_mute, obs_source_hotkey_unmute,
 			source, source);
 
-	if (source->info.output_flags & OBS_SOURCE_TRACK) {
-		source->monitor_unmonitor_key = obs_hotkey_pair_register_source(source,
+	source->monitor_unmonitor_key = obs_hotkey_pair_register_source(source,
 			"libobs.monitor", obs->hotkeys.monitor,
 			"libobs.unmonitor", obs->hotkeys.unmonitor,
 			obs_source_hotkey_monitor, obs_source_hotkey_unmonitor,
 			source, source);
-	}
 
 	if (!(source->info.output_flags & OBS_SOURCE_TRACK)) {
 		source->push_to_mute_key = obs_hotkey_register_source(source,
@@ -418,6 +391,12 @@ static obs_source_t *obs_source_create_internal(const char *id,
 
 	if (!private || source->info.output_flags & OBS_SOURCE_TRACK)
 		obs_source_init_audio_hotkeys(source);
+
+	/* set default for 'sends' bool private setting used for monitoring */
+	obs_data_t *private_settings =
+			obs_source_get_private_settings(source);
+	obs_data_set_default_bool(private_settings, "sends", true);
+	obs_data_release(private_settings);
 
 	/* allow the source to be created even if creation fails so that the
 	 * user's data doesn't become lost */
@@ -1391,8 +1370,11 @@ static void source_output_audio_data(obs_source_t *source,
 			push_back = false;
 		source->last_sync_offset = sync_offset;
 	}
-
-	if (source->monitoring_type != OBS_MONITORING_TYPE_MONITOR_ONLY) {
+	obs_data_t *private_settings =
+		obs_source_get_private_settings(source);
+	bool sends= obs_data_get_bool(private_settings, "sends");
+	obs_data_release(private_settings);
+	if (sends) {
 		if (push_back && source->audio_ts)
 			source_output_audio_push_back(source, &in);
 		else

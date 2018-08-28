@@ -229,6 +229,10 @@ class RecCheckBox : public QCheckBox {
 class MonCheckBox : public QCheckBox {
 	Q_OBJECT
 };
+class SendsCheckBox : public QCheckBox {
+	Q_OBJECT
+};
+
 class VolControl : public QWidget {
 	Q_OBJECT
 
@@ -243,6 +247,9 @@ private:
 	StreamCheckBox  *stream;
 	RecCheckBox     *rec;
 	MonCheckBox     *mon;
+	// The next checkbox controls whether monitoring_type is 'monitor only'
+	// or 'monitor and output'
+	SendsCheckBox   *send; 
 	bool            *mutePtr;
 	QPushButton     *config = nullptr;
 	float           levelTotal;
@@ -268,6 +275,7 @@ private slots:
 	void SetStream(bool checked);
 	void SetRec(bool checked);
 	void SetMon(bool checked);
+	void SetSends(bool checked);
 
 	void SliderChanged(int vol);
 	void updateText();

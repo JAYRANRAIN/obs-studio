@@ -717,7 +717,14 @@ struct obs_source {
 	enum obs_monitoring_type        monitoring_type;
 
 	obs_data_t                      *private_settings;
+	/* 'monitoring' bool: controls whether source is monitored or not; 
+	 * overlaps with 'monitoring_type'.
+	 * The 'sends' bool tracks whether the source sends audio to Audio
+	 * tracks. The two bool enable a mapping to current monitoring_type API
+	 * but allow a complete decoupling of monitoring and output.
+	 */
 	bool                            monitoring;
+	bool                            sends;
 };
 
 extern struct obs_source_info *get_source_info(const char *id);
